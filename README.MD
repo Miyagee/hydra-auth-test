@@ -16,6 +16,9 @@ Tested with Ory Hydra v1.0.0 with a simple Go implementation. This should not be
     -e POSTGRES_DB=hydra \
     -d postgres:9.6
 
+### Pulling Ory Hydra
+    docker pull oryd/hydra
+
 ### Migrate database 
 
     docker run -it --rm \
