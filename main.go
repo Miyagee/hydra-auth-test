@@ -55,7 +55,6 @@ func openIDConfig() {
 
 	var body []byte
 	var content interface{}
-	// body = ...
 
 	req, err := http.NewRequest("GET", "https://localhost:9000/.well-known/openid-configuration", bytes.NewBuffer(body))
 	if err != nil {
@@ -85,7 +84,6 @@ func openIDConfig() {
 	json.Unmarshal(respBody, &content)
 
 	fmt.Println(content.(map[string]interface{}))
-	// ...
 }
 
 func authEndpoint() {
@@ -94,7 +92,6 @@ func authEndpoint() {
 	}
 
 	var body []byte
-	// body = ...
 
 	req, err := http.NewRequest("GET", "https://localhost:9000/oauth2/auth", bytes.NewBuffer(body))
 	if err != nil {
@@ -122,7 +119,6 @@ func authEndpoint() {
 	}
 
 	fmt.Println(string(respBody))
-	// ...
 }
 
 func getAccessToken() string {
@@ -168,7 +164,115 @@ func getAccessToken() string {
 	}
 
 	return "Failed"
-	// ...
+}
+
+func getUserInfo(accessToken string) {
+	headers := map[string][]string{
+		"Accept":        []string{"application/json"},
+		"Authorization": []string{"Bearer " + accessToken},
+	}
+
+	var content interface{}
+	var body []byte
+
+	req, err := http.NewRequest("POST", "https://localhost:9000/userinfo", bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Println("Error NewRequest")
+		log.Fatal(err)
+	}
+	req.Header = headers
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // ignore SSL certificates
+	}}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Println("Error executing request")
+		log.Fatal(err)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		fmt.Println("Error parsing response")
+		log.Fatal(err)
+	}
+
+	json.Unmarshal(respBody, &content)
+
+	fmt.Println(content.(map[string]interface{}))
+}
+
+func userLogout() {
+	var body []byte
+
+	req, err := http.NewRequest("GET", "https://localhost:9000/oauth2/sessions/logout", bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Println("Error NewRequest")
+		log.Fatal(err)
+	}
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // ignore SSL certificates
+	}}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Println("Error executing request")
+		log.Fatal(err)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		fmt.Println("Error parsing html")
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(respBody))
+}
+
+func revokeAccessToken(accessToken string) {
+	headers := map[string][]string{
+		"Accept":       []string{"application/json"},
+		"Content-Type": []string{"application/x-www-form-urlencoded"},
+	}
+
+	var content interface{}
+	body := []byte(fmt.Sprintf("token=%s", accessToken))
+
+	req, err := http.NewRequest("POST", "https://localhost:9000/oauth2/revoke", bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Println("Error NewRequest")
+		log.Fatal(err)
+	}
+	req.Header = headers
+	req.SetBasicAuth("my-client", "my-secret")
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // ignore SSL certificates
+	}}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Println("Error executing request")
+		log.Fatal(err)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		fmt.Println("Error parsing response")
+		log.Fatal(err)
+	}
+
+	json.Unmarshal(respBody, &content)
+
+	fmt.Println(respBody)
 }
 
 func main() {
@@ -190,9 +294,20 @@ func main() {
 	fmt.Println("--------------------------------------------------------------------")
 	fmt.Println("Getting Auth Token")
 	fmt.Println("--------------------------------------------------------------------")
-	getAccessToken()
+	accessToken := getAccessToken()
 	fmt.Println()
 	fmt.Println("--------------------------------------------------------------------")
-	fmt.Println("Getting Auth Token")
+	fmt.Println("Getting User Info")
 	fmt.Println("--------------------------------------------------------------------")
+	getUserInfo(accessToken)
+	fmt.Println()
+	fmt.Println("--------------------------------------------------------------------")
+	fmt.Println("Revoke Token")
+	fmt.Println("--------------------------------------------------------------------")
+	revokeAccessToken(accessToken)
+	fmt.Println()
+	fmt.Println("--------------------------------------------------------------------")
+	fmt.Println("Logout Session")
+	fmt.Println("--------------------------------------------------------------------")
+	userLogout()
 }
